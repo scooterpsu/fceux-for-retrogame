@@ -231,9 +231,16 @@ W_OPTS= -Wno-write-strings -Wno-sign-compare
 
 F_OPTS = -fomit-frame-pointer -fno-builtin -fno-common -fpermissive
 
-OPTIMIZE =  -O3 -mips32r2 -fomit-frame-pointer -fno-builtin   \
+OPTIMIZE =  -O3 -fomit-frame-pointer -fno-builtin   \
             -fno-common -Wno-write-strings -Wno-sign-compare -ffast-math -ftree-vectorize \
 			-funswitch-loops -fno-strict-aliasing
+			
+HAS_MIPS32R2 := $(shell echo | $(CC) -dM -E - |grep _MIPS_ARCH_MIPS32R2)
+ifneq ($(HAS_MIPS32R2),)
+	OPTIMIZE += -mips32r2
+else
+	OPTIMIZE += -mips32 -march=mips32
+endif			
 
 CC_OPTS	= $(F_OPTS) $(W_OPTS) $(OPTIMIZE)
 
