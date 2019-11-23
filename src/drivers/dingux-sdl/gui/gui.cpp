@@ -288,12 +288,6 @@ int FCEUGUI_Init(FCEUGI *gi)
 
 	main_menu_items = sizeof(main_menu) / sizeof(main_menu[0]);
 
-	if (g_romtype != GIT_FDS) { // Remove "Flip disc" if not a FDS
-		for (int i = 3; i < main_menu_items - 1; i++)
-			main_menu[i] = main_menu[i+1];
-		main_menu_items--;
-	}
-
 	if (gi) {
 		if (strlen(FileBase) > 36) {
 			strncpy(g_romname, FileBase, 34);
@@ -348,10 +342,16 @@ void FCEUGUI_Run() {
 		if (parsekey(DINGOO_UP, 0)) {
 			if (index > 0) {
 				index--;
+				if (g_romtype != GIT_FDS && main_menu[index].name == "Flip disc") {
+					index--;					
+				}
 				spy -= 16;
 			} else {
 				index = main_menu_items - 1;
 				spy = 72 + 16*index;
+				if (g_romtype != GIT_FDS) {
+					spy -= 16;			
+				}
 			}
 		}
 
@@ -411,13 +411,13 @@ void FCEUGUI_Run() {
 
 			// Draw menu
 			for (i = 0, y = 72; i < main_menu_items; i++) {
-				// if (g_romtype != GIT_FDS && !strcmp(main_menu[i].name, "Flip disc")) continue;
+				if (g_romtype != GIT_FDS && !strcmp(main_menu[i].name, "Flip disc")) continue;
 
 				DrawText(gui_screen, main_menu[i].name, 60, y);
 				y += 16;
 			}
 
-			// if (g_romtype != GIT_FDS && !strcmp(main_menu[index].name, "Flip disc")) index++;
+			if (g_romtype != GIT_FDS && !strcmp(main_menu[index].name, "Flip disc")) index++;
 
 			// Draw info
 			DrawText(gui_screen, main_menu[index].info, 8, 225);
