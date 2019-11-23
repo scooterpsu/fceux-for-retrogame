@@ -7,6 +7,7 @@ cp bin/fceux ipkg/home/retrofw/emus/fceux/fceux
 cp bin/bg.bmp ipkg/home/retrofw/emus/fceux/bg.bmp
 cp bin/sp.bmp ipkg/home/retrofw/emus/fceux/sp.bmp
 cp fceux.png ipkg/home/retrofw/emus/fceux/fceux.png
+cp -R output/palettes ipkg/home/retrofw/emus/fceux/
 
 cd ipkg
 
