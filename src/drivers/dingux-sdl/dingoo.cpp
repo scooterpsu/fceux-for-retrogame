@@ -233,9 +233,6 @@ int LoadGame(const char *path) {
 	g_config->getOption("SDL.ShowFPS", &showfps);
 	g_config->getOption("SDL.FPSThrottle", &fpsthrottle);
 
-	// Update configs for input system
-	UpdateInputConfig(g_config);
-
 	isloaded = 1;
 
 	FCEUD_NetworkConnect();
@@ -540,7 +537,7 @@ int main(int argc, char *argv[]) {
 
 	int error;
 
-	FCEUD_Message("\nStarting " FCEU_NAME_AND_VERSION "...\n");
+	FCEUD_Message("\nStarting "FCEU_NAME_AND_VERSION"...\n");
 
 #ifdef WIN32
 	/* Taken from win32 sdl_main.c */
@@ -737,7 +734,7 @@ int main(int argc, char *argv[]) {
 		// not exactly an id as an true/false switch; still better than creating another int for that
 		g_config->getOption("SDL.SubtitleDisplay", &id);
 		extern bool movieSubtitles;
-		movieSubtitles = id != 0;
+		movieSubtitles = id;
 	}
 
 	// load the hotkeys from the config life
@@ -810,6 +807,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	g_config->getOption("SDL.Frameskip", &frameskip);
+
+    // update rom specified input config
+	UpdateInput(g_config);
 
 	// loop playing the game
 	DoFun(frameskip);

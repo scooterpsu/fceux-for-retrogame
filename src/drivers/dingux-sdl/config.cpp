@@ -191,6 +191,7 @@ Config * InitConfig() {
 	config->addOption("mergecontrols", "SDL.MergeControls", 0);
 	config->addOption("analogstick", "SDL.AnalogStick", 0);
 	config->addOption("autofirepattern", "SDL.AutoFirePattern", 0);
+	config->addOption("inputmenu", "SDL.InputMenu", 0);
 
 	// allow for input configuration
 	// NOT SUPPORTED
@@ -242,8 +243,13 @@ Config * InitConfig() {
 		for (unsigned int j = 0; j < GAMEPAD_NUM_BUTTONS; j++) {
 			config->addOption(prefix + GamePadNames[j], DefaultGamePad[i][j]);
 		}
-	}
 
+	}
+	// make default mapping match snes layout. keep in sync with resetMappings() in control_settings.cpp;
+	config->setOption("SDL.Input.GamePad.0A", DefaultGamePad[0][1]);
+	config->setOption("SDL.Input.GamePad.0B", DefaultGamePad[0][9]);
+	config->setOption("SDL.Input.GamePad.0TurboA", DefaultGamePad[0][0]);
+	config->setOption("SDL.Input.GamePad.0TurboB", DefaultGamePad[0][8]);
 #if 0
 	// PowerPad 0 - 1
 	for(unsigned int i = 0; i < POWERPAD_NUM_DEVICES; i++) {
@@ -432,5 +438,5 @@ void UpdateEMUCore(Config *config) {
 	}
 #endif
 
-	FCEUI_SetRenderedLines(start + 8, end - 8, start, end);
+	FCEUI_SetRenderedLines(start, end, start, end);
 }

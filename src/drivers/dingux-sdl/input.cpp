@@ -48,6 +48,7 @@
 int NoWaiting = 1;
 extern Config *g_config;
 extern bool bindSavestate, frameAdvanceLagSkip, lagCounterDisplay;
+int fastforward = 0;
 
 /* UsrInputType[] is user-specified.  InputType[] is current
  (game loading can override user settings)
@@ -64,7 +65,7 @@ static int frameAdvanceKey = 0;
 
 static unsigned short analog1 = 0;
 
-static int merge_controls = 0, use_analog = 0, autofire_pattern = 0;
+static int merge_controls = 0, use_analog = 0, autofire_pattern = 0, inputmenu = 0;
 
 #define joy_commit_range    3276
 enum
@@ -310,17 +311,23 @@ static void KeyboardCommands() {
 		FCEUI_SetRenderPlanes(true, state);
 	}
 
-	// Power flick (SDLK_HOME) to enter GUI
-	if (_keyonly(DINGOO_L2)
-        || MenuRequested) {
+	if (MenuRequested) {
 		SilenceSound(1);
+		MenuRequested = false;
 		FCEUGUI_Run();
+		while (ispressed(DINGOO_A) || ispressed(DINGOO_B)) { // wait for keyup
+			SDL_PumpEvents();
+		}
 		SilenceSound(0);
 		analog1 = 0;
-		MenuRequested = false;
 		return;
 	}
 
+    // toggle fastforward
+    if(ispressed(DINGOO_L)) {
+        fastforward = !fastforward;
+        resetkey(DINGOO_L);
+    }
 	// R shift + combokeys
 	if(ispressed(DINGOO_R)) {
 		extern int g_slot; // import from gui.cpp
@@ -666,11 +673,11 @@ static void UpdatePhysicalInput()
             }
             break;
         case SDL_KEYDOWN:
-            if (event.key.keysym.sym == DINGOO_MENU)
-                // Because a KEYUP is sent straight after the KEYDOWN for the
-                // Power switch, SDL_GetKeyState will not ever see this.
-                // Keep a record of it.
-                MenuRequested = true;
+			if (
+				((inputmenu == 0 || inputmenu == 1) && (event.key.keysym.sym == DINGOO_MENU || event.key.keysym.sym == DINGOO_MENU_RFW))
+				|| ((inputmenu == 0 || inputmenu == 2) && (g_keyState[DINGOO_SELECT] && event.key.keysym.sym == DINGOO_START))
+				|| ((inputmenu == 0 || inputmenu == 3) && event.key.keysym.sym == DINGOO_L2)				
+			) {
             break;
 		case SDL_JOYAXISMOTION:
         {
@@ -1448,6 +1455,7 @@ void UpdateInput(Config *config) {
 }
 
 void UpdateInputConfig(Config *config) {
+	config->getOption("SDL.InputMenu", &inputmenu);	
 	config->getOption("SDL.MergeControls", &merge_controls);
 	config->getOption("SDL.AnalogStick", &use_analog);
 	config->getOption("SDL.AutoFirePattern", &autofire_pattern);

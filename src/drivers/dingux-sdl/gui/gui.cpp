@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
 
 #include "../dingoo.h"
 #include "../dingoo-video.h"
@@ -27,7 +28,7 @@ static SDL_Surface *g_bg;
 static uint16 *g_psdl;
 static uint8 g_preview[256 * 256 + 8];
 static uint8 g_ispreview;
-static char g_romname[32] = "";
+static char g_romname[48] = "";
 static int g_dirty = 1;
 int g_slot = 0; // make it accessible from input.cpp
 static int g_romtype;
@@ -36,12 +37,7 @@ static int counter = 0;
 
 void FCEUGUI_Flip()
 {
-	SDL_Rect dstrect;
-
-	dstrect.x = (screen->w - 320) / 2;
-	dstrect.y = (screen->h - 240) / 2;
-
-	SDL_BlitSurface(gui_screen, 0, screen, &dstrect);
+	SDL_SoftStretch(gui_screen, NULL, screen, NULL);
 	SDL_Flip(screen);
 }
 
@@ -198,9 +194,10 @@ static int load_rom() {
 	#else
 	if (!RunFileBrowser(NULL, filename, types)) {
 	#endif
-		CloseGame();
-		SDL_Quit();
-		exit(-1);
+		return 0;
+		// CloseGame();
+		// SDL_Quit();
+		// exit(-1);
 	}
 
 	//  TODO - Must close game here?
@@ -236,12 +233,12 @@ static int flip_disc() {
 static int save_state() {
 	FCEUI_SaveState(NULL);
 	save_preview();
-	return 0;
+	return 1;
 }
 
 static int load_state() {
 	FCEUI_LoadState(NULL);
-	return 0;
+	return 1;
 }
 
 static int save_screenshot() {
@@ -261,15 +258,18 @@ static int cmd_exit() {
 /* MAIN MENU */
 
 static MenuEntry main_menu[] = { 
-		{ "Load ROM", "Load new rom or movie", load_rom },
-		{ "Reset", "Reset NES", reset_nes },
-		{ "Flip disc", "Switch side or disc (FDS)", flip_disc },
-		{ "Save state", "Save current state", save_state },
 		{ "Load state", "Load emulation state", load_state },
+		{ "Save state", "Save current state", save_state },
 		{ "Screenshot", "Save current frame shot", save_screenshot },
+		{ "Flip disc", "Switch side or disc (FDS)", flip_disc },
+		{ "Reset", "Reset NES", reset_nes },
+#ifndef NO_ROM_BROWSER
+		{ "Load ROM", "Load new rom or movie", load_rom },
+#endif
 		{ "Settings", "Change current settings", cmd_settings_menu },
 		{ "Exit", "Exit emulator", cmd_exit } 
 };
+static int main_menu_items;
 
 extern char FileBase[2048];
 
@@ -286,9 +286,17 @@ int FCEUGUI_Init(FCEUGI *gi)
 	if (InitFont() < 0)
 		return -2;
 
+	main_menu_items = sizeof(main_menu) / sizeof(main_menu[0]);
+
+	if (g_romtype != GIT_FDS) { // Remove "Flip disc" if not a FDS
+		for (int i = 3; i < main_menu_items - 1; i++)
+			main_menu[i] = main_menu[i+1];
+		main_menu_items--;
+	}
+
 	if (gi) {
-		if (strlen(FileBase) > 28) {
-			strncpy(g_romname, FileBase, 24);
+		if (strlen(FileBase) > 36) {
+			strncpy(g_romname, FileBase, 34);
 			strcat(g_romname, "...");
 		} else
 			strcpy(g_romname, FileBase);
@@ -301,8 +309,8 @@ int FCEUGUI_Init(FCEUGI *gi)
 void FCEUGUI_Reset(FCEUGI *gi) {
 	g_psdl = FCEUD_GetPaletteArray16();
 
-	if (strlen(FileBase) > 28) {
-		strncpy(g_romname, FileBase, 24);
+	if (strlen(FileBase) > 36) {
+		strncpy(g_romname, FileBase, 34);
 		strcat(g_romname, "...");
 	} else
 		strcpy(g_romname, FileBase);
@@ -342,13 +350,13 @@ void FCEUGUI_Run() {
 				index--;
 				spy -= 16;
 			} else {
-				index = 7;
+				index = main_menu_items - 1;
 				spy = 72 + 16*index;
 			}
 		}
 
 		if (parsekey(DINGOO_DOWN, 0)) {
-			if (index < 7) {
+			if (index < main_menu_items - 1) {
 				index++;
 				spy += 16;
 			} else {
@@ -362,7 +370,7 @@ void FCEUGUI_Run() {
 			if(index == 3) load_preview();
 		}
 
-		if (index == 3 || index == 4) {
+		if (index == 0 || index == 1) {
 			if (parsekey(DINGOO_RIGHT, 0)) {
 				if (g_slot < 9) {
 					g_slot++;
@@ -397,45 +405,41 @@ void FCEUGUI_Run() {
 			DrawChar(gui_screen, SP_SELECTOR, 56, spy);
 			DrawChar(gui_screen, SP_SELECTOR, 77, spy);
 
-			if (index == 3 || index == 4) {
-				// Draw state preview
-				DrawChar(gui_screen, SP_PREVIEWBLOCK, 184, 73);
-				draw_preview((unsigned short *)gui_screen->pixels, 185, 100);
-				if (!g_ispreview)
-					DrawChar(gui_screen, SP_NOPREVIEW, 207, 135);
-			}
-
-			if (index == 5) {
-				DrawChar(gui_screen, SP_PREVIEWBLOCK, 184, 73);
-				draw_shot_preview((unsigned short *)gui_screen->pixels, 185, 100);
-			}
-
-			DrawText(gui_screen, "Now Playing:", 8, 37);
-			DrawText(gui_screen, g_romname, 96, 37);
+			// DrawText(gui_screen, "Now Playing:", 8, 37);
+			// DrawText(gui_screen, g_romname, 96, 37);
+			DrawText(gui_screen, g_romname, 8, 37);
 
 			// Draw menu
-			for (i = 0, y = 72; i < 8; i++, y += 16) {
+			for (i = 0, y = 72; i < main_menu_items; i++) {
+				// if (g_romtype != GIT_FDS && !strcmp(main_menu[i].name, "Flip disc")) continue;
+
 				DrawText(gui_screen, main_menu[i].name, 60, y);
+				y += 16;
 			}
+
+			// if (g_romtype != GIT_FDS && !strcmp(main_menu[index].name, "Flip disc")) index++;
 
 			// Draw info
 			DrawText(gui_screen, main_menu[index].info, 8, 225);
 
-			// If save/load state render slot preview and number
-			if (index == 3 || index == 4) {
-				char tmp[32];
-				sprintf(tmp, "Slot %d", g_slot);
-				DrawText(gui_screen, tmp, 212, 80);
+			if (index == 0 || index == 1 || index == 2) {
+				// Draw state preview
+				DrawChar(gui_screen, SP_PREVIEWBLOCK, 184, spy);
 
-				if (g_slot > 0)
-					DrawChar(gui_screen, SP_LEFTARROW, 197, 83);
-				if (g_slot < 9)
-					DrawChar(gui_screen, SP_RIGHTARROW, 259, 83);
-			}
+				if (index == 2) { // screenshot
+					draw_shot_preview((unsigned short *)gui_screen->pixels, 185, spy+13);
+					DrawText(gui_screen, "Preview", 207, spy);
+				} else {
+					// If save/load state render slot preview and number
+					char tmp[32];
+					sprintf(tmp, "Slot %d", g_slot);
+					DrawText(gui_screen, tmp, 212, spy);
 
-			// If screenshot render current frame preview
-			if (index == 5) {
-				DrawText(gui_screen, "Preview", 207, 80);
+					if (g_slot > 0) DrawChar(gui_screen, SP_LEFTARROW, 197, spy+3);
+					if (g_slot < 9) DrawChar(gui_screen, SP_RIGHTARROW, 259, spy+3);
+					draw_preview((unsigned short *)gui_screen->pixels, 185, spy+13);
+					if (!g_ispreview) DrawChar(gui_screen, SP_NOPREVIEW, 207, spy+48);
+				}
 			}
 
 			g_dirty = 0;

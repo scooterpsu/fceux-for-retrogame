@@ -199,6 +199,7 @@ void InitGuiVideo() {
  * Toggles the full-screen display.
  */
 void ToggleFS() {
+	dingoo_clear_video();
 }
 
 /* Taken from /src/drivers/common/vidblit.cpp */
@@ -329,47 +330,52 @@ void BlitScreen(uint8 *XBuf) {
 
 	register uint8 *pBuf = XBuf;
 
-	if(s_fullscreen == 4) { // fullscreen smooth
-		if (s_clipSides) {
-			upscale_320x240_bilinearish_clip((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8, 256);
-		} else {
-			upscale_320x240_bilinearish_noclip((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8, 256);
-		}
-	} else if(s_fullscreen == 3) { // fullscreen
-		switch(screen->w) {
-			case 480: upscale_480x272((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8); break;
-			case 400: upscale_384x240((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8); break;
-			case 320: upscale_320x240((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8); break;
-		}
-	} else if(s_fullscreen == 2) { // aspect fullscreen
-		switch(screen->w) {
-			case 480: upscale_384x272((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8); break;
-			case 400:
-			case 320:
-				pBuf += (s_srendline * 256) + 8;
-				register uint16 *dest = (uint16 *) screen->pixels;
-				//dest += (320 * s_srendline) + 20;
-				dest += (screen->w * s_srendline) + (screen->w - 280) / 2 + ((screen->h - 240) / 2) * screen->w;
+	switch (s_fullscreen) {
+	    case 4: // fullscreen smooth
+			if (s_clipSides) {
+				upscale_320x240_bilinearish_clip((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8, 256);
+			} else {
+				upscale_320x240_bilinearish_noclip((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8, 256);
+			}
+			break;
+	    case 3: // fullscreen
+			switch(screen->w) {
+				case 480: upscale_480x272((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8); break;
+				case 400: upscale_384x240((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8); break;
+				case 320: upscale_320x240((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8); break;
+			}
+			break;
+	    case 2: // aspect fullscreen
+			switch(screen->w) {
+				case 480: upscale_384x272((uint32 *)screen->pixels, (uint8 *)XBuf + 256 * 8); break;
+				case 400:
+				case 320:
+					pBuf += (s_srendline * 256) + 8;
+					register uint16 *dest = (uint16 *) screen->pixels;
+					//dest += (320 * s_srendline) + 20;
+					dest += (screen->w * s_srendline) + (screen->w - 280) / 2 + ((screen->h - 240) / 2) * screen->w;
 
-				// semi fullscreen no blur
-				for (y = s_tlines; y; y--) {
-					for (x = 240; x; x -= 6) {
-						__builtin_prefetch(dest + 2, 1);
-						*dest++ = s_psdl[*pBuf];
-						*dest++ = s_psdl[*(pBuf + 1)];
-						*dest++ = s_psdl[*(pBuf + 2)];
-						*dest++ = s_psdl[*(pBuf + 3)];
-						*dest++ = s_psdl[*(pBuf + 3)];
-						*dest++ = s_psdl[*(pBuf + 4)];
-						*dest++ = s_psdl[*(pBuf + 5)];
-						pBuf += 6;
+					// semi fullscreen no blur
+					for (y = s_tlines; y; y--) {
+						for (x = 240; x; x -= 6) {
+							__builtin_prefetch(dest + 2, 1);
+							*dest++ = s_psdl[*pBuf];
+							*dest++ = s_psdl[*(pBuf + 1)];
+							*dest++ = s_psdl[*(pBuf + 2)];
+							*dest++ = s_psdl[*(pBuf + 3)];
+							*dest++ = s_psdl[*(pBuf + 3)];
+							*dest++ = s_psdl[*(pBuf + 4)];
+							*dest++ = s_psdl[*(pBuf + 5)];
+							pBuf += 6;
+						}
+						pBuf += 16;
+						//dest += 40;
+						dest += screen->w - 280;
 					}
-					pBuf += 16;
-					//dest += 40;
-					dest += screen->w - 280;
-				}
-		}
-	} else { // native res
+			}
+			break;
+	    default: // native res
+		{
 		//int pinc = (320 - NWIDTH) >> 1;
 		int32 pinc = (screen->w - NWIDTH) >> 1;
 		int32 append = 256 - NWIDTH;
@@ -400,6 +406,7 @@ void BlitScreen(uint8 *XBuf) {
 				pBuf += 8;
 			}
 			dest += pinc;
+			}
 		}
 	}
 

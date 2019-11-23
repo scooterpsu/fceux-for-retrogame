@@ -37,6 +37,7 @@ static unsigned int s_BufferRead;
 static unsigned int s_BufferWrite;
 static volatile unsigned int s_BufferIn;
 
+extern int fastforward;
 static int s_mute = 0;
 
 SDL_AudioSpec spec;
@@ -174,6 +175,9 @@ uint32 GetBufferedSound(void) {
 void WriteSound(int32 *buf, int Count) 
 {
     //extern int EmulationPaused;
+    if(fastforward) {
+        Count /= 2;
+    }
 
     SDL_LockAudio();
 

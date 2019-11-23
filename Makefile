@@ -239,7 +239,7 @@ HAS_MIPS32R2 := $(shell echo | $(CC) -dM -E - |grep _MIPS_ARCH_MIPS32R2)
 ifneq ($(HAS_MIPS32R2),)
 	OPTIMIZE += -mips32r2
 else
-	OPTIMIZE += -mips32 -march=mips32
+	OPTIMIZE += -mips32 -march=mips32 -DNO_ROM_BROWSER
 endif			
 
 CC_OPTS	= $(F_OPTS) $(W_OPTS) $(OPTIMIZE)
