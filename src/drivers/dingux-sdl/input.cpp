@@ -678,6 +678,11 @@ static void UpdatePhysicalInput()
 				|| ((inputmenu == 0 || inputmenu == 2) && (g_keyState[DINGOO_SELECT] && event.key.keysym.sym == DINGOO_START))
 				|| ((inputmenu == 0 || inputmenu == 3) && event.key.keysym.sym == DINGOO_L2)				
 			) {
+	            // Because a KEYUP is sent straight after the KEYDOWN for the
+	            // Power switch, SDL_GetKeyState will not ever see this.
+	            // Keep a record of it.
+	            MenuRequested = true;
+			}
             break;
 		case SDL_JOYAXISMOTION:
         {
